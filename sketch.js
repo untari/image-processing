@@ -34,7 +34,8 @@ function draw() {
       let gray = 0.299 * r + 0.587 * g + 0.114 * b;
 
       // Increase brightness by 20%
-      let increasedBrightness = min(255, gray * 1.2);
+      // constrain the value to the range [0, 255]
+      let increasedBrightness = constrain(gray * 1.2, 0, 255);
 
       // Assign the new values
       scaledPicture.pixels[i] = increasedBrightness;
