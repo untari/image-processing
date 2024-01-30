@@ -1,82 +1,59 @@
-// ********************************
-// BACKGROUND SUBTRACTION EXAMPLE *
-// ********************************
-var video;
-var backImg;
-var diffImg;
-var currImg;
-var thresholdSlider;
-var threshold;
+let video;
+let picture;
 
 function setup() {
-    createCanvas(640 * 2, 480);
-    pixelDensity(1);
-    video = createCapture(VIDEO);
-    video.hide();
+  createCanvas(640 * 2, 480);
+  video = createCapture(VIDEO);
+  video.hide();
 
-    thresholdSlider = createSlider(0, 255, 50);
-    thresholdSlider.position(20, 20);
+  // Create a button element
+  const captureButton = createButton('Capture Picture');
+  captureButton.id('captureButton');
+  captureButton.mousePressed(takePicture);
 }
 
 function draw() {
-    background(0);
-    image(video, 0, 0);
+  background(255);
 
-    currImg = createImage(video.width, video.height);
-    currImg.copy(video, 0, 0, video.width, video.height, 0, 0, video.width, video.height);
+  // Display the webcam image in the grid at the position titled "Webcam image"
+  image(video, 0, 0, 320, 240);
 
-    diffImg = createImage(video.width, video.height);
-    diffImg.loadPixels();
+  if (picture) {
+    // Scale the picture to 160 x 120 pixels
+    const scaledPicture = picture.get();
+    scaledPicture.resize(160, 120);
 
-    threshold = thresholdSlider.value();
+    // Nested loop to convert the picture to grayscale and increase brightness
+    scaledPicture.loadPixels();
+    for (let i = 0; i < scaledPicture.pixels.length; i += 4) {
+      let r = scaledPicture.pixels[i];
+      let g = scaledPicture.pixels[i + 1];
+      let b = scaledPicture.pixels[i + 2];
 
-    if (typeof backImg !== 'undefined') {
-        backImg.loadPixels();
-        currImg.loadPixels();
-        for (var x = 0; x < currImg.width; x += 1) {
-            for (var y = 0; y < currImg.height; y += 1) {
-                var index = (x + (y * currImg.width)) * 4;
-                var redSource = currImg.pixels[index + 0];
-                var greenSource = currImg.pixels[index + 1];
-                var blueSource = currImg.pixels[index + 2];
+      // Convert to grayscale
+      let gray = 0.299 * r + 0.587 * g + 0.114 * b;
 
-                var redBack = backImg.pixels[index + 0];
-                var greenBack = backImg.pixels[index + 1];
-                var blueBack = backImg.pixels[index + 2];
+      // Increase brightness by 20%
+      let increasedBrightness = min(255, gray * 1.2);
 
-                var d = dist(redSource, greenSource, blueSource, redBack, greenBack, blueBack);
-
-                if (d > threshold) {
-                    diffImg.pixels[index + 0] = 0;
-                    diffImg.pixels[index + 1] = 0;
-                    diffImg.pixels[index + 2] = 0;
-                    diffImg.pixels[index + 3] = 255;
-                } else {
-                    diffImg.pixels[index + 0] = 255;
-                    diffImg.pixels[index + 1] = 255;
-                    diffImg.pixels[index + 2] = 255;
-                    diffImg.pixels[index + 3] = 255;
-                }
-            }
-        }
+      // Assign the new values
+      scaledPicture.pixels[i] = increasedBrightness;
+      scaledPicture.pixels[i + 1] = increasedBrightness;
+      scaledPicture.pixels[i + 2] = increasedBrightness;
     }
-    diffImg.updatePixels();
-    image(diffImg, 640, 0);
+    scaledPicture.updatePixels();
 
-    noFill();
-    stroke(255);
-    text(threshold, 160, 35);
+    // Display the modified image at the appropriate position
+    image(scaledPicture, 360, 0);
+  }
 }
 
-function keyPressed() {
-    backImg = createImage(currImg.width, currImg.height);
-    backImg.copy(currImg, 0, 0, currImg.width, currImg.height, 0, 0, currImg.width, currImg.height);
-    console.log("saved new background");
+function takePicture() {
+  // Take a picture when the button is clicked
+  picture = video.get();
 }
 
-// faster method for calculating color similarity which does not calculate root.
-// Only needed if dist() runs slow
-function distSquared(x1, y1, z1, x2, y2, z2){
-  var d = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1);
-  return d;
+function savePicture() {
+  // Save picture to disk
+  save(picture, 'picture.png');
 }
