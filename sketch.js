@@ -20,10 +20,17 @@ function setup() {
   captureButton.id('captureButton');
   captureButton.mousePressed(takePicture);
 
+  let redSliderText = createP('Red');
+  let greenSliderText = createP('Green');
+  let blueSliderText = createP('Blue');
+
   // Create sliders for threshold control
   redThreshold = createSlider(0, 255, 128);
+  redSliderText.position(139, 700, 130);
   greenThreshold = createSlider(0, 255, 128);
+  greenSliderText.position(270, 700, 130);
   blueThreshold = createSlider(0, 255, 128);
+  blueSliderText.position(419, 700, 130)
 }
 
 function draw() {
@@ -52,6 +59,8 @@ function draw() {
     image(segmentedImages.red, 0, 280, 160, 120);
     image(segmentedImages.green, 200, 280, 160, 120);
     image(segmentedImages.blue, 400, 280, 160, 120);
+  
+    
   }
 }
 
