@@ -11,7 +11,7 @@ let segmentedImages = {
 let redThreshold, greenThreshold, blueThreshold;
 
 function setup() {
-  createCanvas(640 * 2, 480);
+  createCanvas(640 * 2, 680);
   video = createCapture(VIDEO);
   video.hide();
 
@@ -44,14 +44,14 @@ function draw() {
     let segmentedImages = segmentImageSliders(scaledPicture, redThreshold.value(), greenThreshold.value(), blueThreshold.value());
 
     // Display the R, G, B channels with threshold control
-    image(redChannel, 0, 230, 160, 120);
-    image(greenChannel, 200, 230, 160, 120);
-    image(blueChannel, 400, 230, 160, 120);
+    image(redChannel, 0, 140, 160, 120);
+    image(greenChannel, 200, 140, 160, 120);
+    image(blueChannel, 400, 140, 160, 120);
 
     // Display the segmented images for R, G, B channels
-    image(segmentedImages.red, 600, 230, 160, 120);
-    image(segmentedImages.green, 800, 230, 160, 120);
-    image(segmentedImages.blue, 1000, 230, 160, 120);
+    image(segmentedImages.red, 0, 280, 160, 120);
+    image(segmentedImages.green, 200, 280, 160, 120);
+    image(segmentedImages.blue, 400, 280, 160, 120);
   }
 }
 
