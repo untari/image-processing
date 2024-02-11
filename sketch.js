@@ -9,6 +9,8 @@ let segmentedImages = {
   ycbcr: null
 };
 let redThreshold, greenThreshold, blueThreshold;
+let hsvImage;
+let ycbcrImage;
 
 function setup() {
   createCanvas(640 * 2, 680);
@@ -47,8 +49,7 @@ function draw() {
     image(greyPicture, 200, 0, 160, 120);
 
 
-    // Display the original image
-    // image(scaledPicture, 400, 0, 160, 120);
+
 
     // Perform segmentation with individual channel thresholds
     let segmentedImages = segmentImageSliders(scaledPicture, redThreshold.value(), greenThreshold.value(), blueThreshold.value());
@@ -62,6 +63,20 @@ function draw() {
     image(segmentedImages.red, 0, 280, 160, 120);
     image(segmentedImages.green, 200, 280, 160, 120);
     image(segmentedImages.blue, 400, 280, 160, 120);
+
+    // Display the original image
+    image(scaledPicture, 0, 420, 160, 120);
+
+    // Display the HSV image if defined
+    if (hsvImage) {
+      image(hsvImage, 200, 420, 160, 120);
+    }
+
+    // Display the YCbCr image if defined
+    if (ycbcrImage) {
+      image(ycbcrImage, 400, 420, 160, 120);
+    }
+
   }
 }
 
