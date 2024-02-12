@@ -8,7 +8,7 @@ let segmentedImages = {
   hsv: null,
   ycbcr: null
 };
-let redThreshold, greenThreshold, blueThreshold, hsvThreshold, ycbcrThreshold;
+let redThreshold, greenThreshold, blueThreshold;
 let hsvImage;
 let ycbcrImage;
 
@@ -35,10 +35,6 @@ function setup() {
 
   blueThreshold = createSlider(0, 255, 128);
   blueSliderText.position(419, 700, 130);
-
-  hsvThreshold = createSlider(0, 255, 128);
-  ycbcrThreshold = createSlider(0, 255, 128);
-
 }
 
 function draw() {
