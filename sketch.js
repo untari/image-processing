@@ -11,11 +11,22 @@ let segmentedImages = {
 let redThreshold, greenThreshold, blueThreshold;
 let hsvImage;
 let ycbcrImage;
+let faceapi;
+let detections;
+
+// by default all options are set to true
+const detectionOptions = {
+  withLandmarks: true,
+  withDescriptors: false,
+};
 
 function setup() {
   createCanvas(640 * 2, 680);
   video = createCapture(VIDEO);
   video.hide();
+
+  faceapi = ml5.faceApi(video, detectionOptions, modelReady);
+  textAlign(RIGHT);
 
   // Create a button element
   const captureButton = createButton('Capture Image');
@@ -71,6 +82,20 @@ function draw() {
     if (ycbcrImage) {
       image(ycbcrImage, 400, 420, 160, 120);
     }
+
+    // Display the original image
+    image(scaledPicture, 0, 560, 160, 120);
+    // Display the face detection result
+    if (segmentedImages.face) {
+      image(segmentedImages.face, 600, 420, 160, 120);
+    }
+    // Call face detection functions from the second script
+    if (detections) {
+      if (detections.length > 0) {
+        drawFaceDetectionOnImage(detections, 0, 560, 160, 120);
+      }
+    }
+    faceapi.detect(gotResults);
   }
 }
 
@@ -95,6 +120,9 @@ function takePicture() {
 
   // Convert to YCbCr color space
   ycbcrImage = rgbToYCbCr(scaledPicture);
+
+  // Call the face detection function from the second script
+  faceapi.detect(gotResults);
 }
 
 function createGreyscaleImage(src) {
@@ -261,4 +289,45 @@ function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
     green: segmentedGreenImage,
     blue: segmentedBlueImage
   };
+}
+
+function modelReady() {
+  console.log("ready!");
+  console.log(faceapi);
+  faceapi.detect(gotResults);
+}
+
+function gotResults(err, result) {
+  if (err) {
+    console.log(err);
+    return;
+  }
+  // console.log(result)
+  detections = result;
+  if (detections) {
+    if (detections.length > 0) {
+      // Draw face detection on the specified area of the canvas
+      drawFaceDetectionOnImage(detections, 0, 560, 160, 120);
+    }
+  }
+  faceapi.detect(gotResults);
+}
+
+// Function to draw face detection on a specified area of the canvas
+function drawFaceDetectionOnImage(detections, x, y, w, h) {
+  for (let i = 0; i < detections.length; i += 1) {
+    const alignedRect = detections[i].alignedRect;
+    const box = alignedRect._box;
+
+    // Adjust coordinates to match the specified area
+    const adjustedX = x + box._x * (w / video.width);
+    const adjustedY = y + box._y * (h / video.height);
+    const adjustedWidth = box._width * (w / video.width);
+    const adjustedHeight = box._height * (h / video.height);
+
+    noFill();
+    stroke(161, 95, 251);
+    strokeWeight(2);
+    rect(adjustedX, adjustedY, adjustedWidth, adjustedHeight);
+  }
 }
