@@ -11,11 +11,12 @@ let segmentedImages = {
 let redThreshold, greenThreshold, blueThreshold;
 let hsvImage;
 let ycbcrImage;
-
 let faceapi;
 let detections;
 
-let currentEffect = 'original';
+let currentFaceModification = 'original';
+let hasTakenPicture = false;
+let hasapplyEffectToFace = false;
 
 
 // by default all options are set to true
@@ -53,20 +54,20 @@ function setup() {
 }
 
 function keyTyped() {
-  // Change the currentEffect based on key press
+  // Change the currentFaceModification based on key press
   switch (key) {
     case '1':
-      currentEffect = 'greyscale';
+      currentFaceModification = 'greyscale';
       break;
     case '2':
-      currentEffect = 'blurred';
+      currentFaceModification = 'blurred';
       break;
     case '3':
-      currentEffect = 'colorConverted';
+      currentFaceModification = 'colorConverted';
       break;
-    case '4':
-      currentEffect = 'pixelate';
-      break;
+    // case '4':
+    //   currentFaceModification = 'pixelate';
+    //   break;
   }
 }
 
@@ -105,13 +106,15 @@ function draw() {
     if (ycbcrImage) {
       image(ycbcrImage, 400, 420, 160, 120);
     }
+
     // Display the original image
     image(scaledPicture, 0, 560, 160, 120);
 
     // Display face detection results
     drawBox(detections, 0, 560);
-    // Display the selected effect on the detected face
-    applyEffectToFace(currentEffect, detections, 0, 560);
+
+    applyEffectToFace(currentFaceModification, detections, 200, 560);
+  
   }
 }
 
@@ -132,13 +135,14 @@ function takePicture() {
   blueChannel = extractChannelImage(scaledPicture, 'blue');
 
   // Convert to HSV color space
-  hsvImage = rgbToHsv(scaledPicture);
+  hsvImage = rgbToHsv(redChannel);
 
   // Convert to YCbCr color space
-  ycbcrImage = rgbToYCbCr(scaledPicture);
+  ycbcrImage = rgbToYCbCr(redChannel);
 
   // Perform face detection on the specified image
   faceapi.detectSingle(scaledPicture, gotResults);
+  hasTakenPicture = true;
 }
 
 function createGreyscaleImage(src) {
@@ -337,7 +341,11 @@ function drawBox(detections, offsetX, offsetY) {
   }
 }
 
-function applyEffectToFace(effect, detections, offsetX, offsetY) {
+function applyEffectToFace(effect, detections, offsetX, offsetY, debug = false) {
+  if (hasapplyEffectToFace) {
+    console.log("Effect has already been applied. Skipping...");
+    return;
+  }
   if (detections) {
     const alignedRect = detections.alignedRect;
     const { _x, _y, _width, _height } = alignedRect._box;
@@ -346,57 +354,69 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
 
     switch (effect) {
       case 'greyscale':
+        console.log('greyscale');
         faceImage = createGreyscaleImage(scaledPicture.get(_x, _y, _width, _height));
         break;
       case 'blurred':
+        console.log('blurred');
         let blurredImage = scaledPicture.get(_x, _y, _width, _height);
-        blurredImage.filter(BLUR, 5);
+        blurredImage.filter(BLUR, 15);
         faceImage = blurredImage;
         break;
       case 'colorConverted':
+        console.log('colorConverted');
         faceImage = rgbToHsv(scaledPicture.get(_x, _y, _width, _height));
         break;
-      case 'pixelate':
-        faceImage = pixelateFace(_x, _y, _width, _height);
-        break;
+      // case 'pixelate':
+      //   console.log('pixelate');
+      //   faceImage = pixelateFace(_x, _y, _width, _height);
+      //   break;
       default:
+        // Use the entire face region without specifying dimensions
         faceImage = scaledPicture.get(_x, _y, _width, _height);
     }
 
+      console.log("x + offsetX:", _x + offsetX);
+      console.log("y + offsetY:", _y + offsetY);
+      console.log("width:", _width);
+      console.log("height:", _height);
+    
     image(faceImage, _x + offsetX, _y + offsetY, _width, _height);
+    
   }
 }
 
-function pixelateFace(x, y, width, height) {
-  let pixelatedImage = scaledPicture.get(x, y, width, height);
+// // function pixelateFace(x, y, width, height) {
+// //   let pixelatedImage = createImage(width, height);
 
-  for (let i = x; i < x + width; i += 5) {
-    for (let j = y; j < y + height; j += 5) {
-      let averagePixel = calculateAveragePixel(i, j, 5);
-      pixelatedImage.set(i, j, averagePixel);
-    }
-  }
+// //   for (let i = 0; i < width; i += 5) {
+// //     for (let j = 0; j < height; j += 5) {
+// //       let averagePixel = calculateAveragePixel(x + i, y + j, 5);
+// //       pixelatedImage.set(i, j, averagePixel);
+// //     }
+// //   }
 
-  return pixelatedImage;
-}
+// //   pixelatedImage.updatePixels();
+// //   return pixelatedImage;
+// // }
 
-function calculateAveragePixel(x, y, blockSize) {
-  let totalR = 0,
-    totalG = 0,
-    totalB = 0;
+// function calculateAveragePixel(x, y, blockSize) {
+//   let totalR = 0,
+//     totalG = 0,
+//     totalB = 0;
 
-  for (let i = 0; i < blockSize; i++) {
-    for (let j = 0; j < blockSize; j++) {
-      let pixelColor = scaledPicture.get(x + i, y + j);
-      totalR += red(pixelColor);
-      totalG += green(pixelColor);
-      totalB += blue(pixelColor);
-    }
-  }
+//   for (let i = 0; i < blockSize; i++) {
+//     for (let j = 0; j < blockSize; j++) {
+//       let pixelColor = scaledPicture.get(x + i, y + j);
+//       totalR += red(pixelColor);
+//       totalG += green(pixelColor);
+//       totalB += blue(pixelColor);
+//     }
+//   }
 
-  let averageR = totalR / (blockSize * blockSize);
-  let averageG = totalG / (blockSize * blockSize);
-  let averageB = totalB / (blockSize * blockSize);
+//   let averageR = totalR / (blockSize * blockSize);
+//   let averageG = totalG / (blockSize * blockSize);
+//   let averageB = totalB / (blockSize * blockSize);
 
-  return color(averageR, averageG, averageB);
-}
+//   return color(averageR, averageG, averageB);
+// }
