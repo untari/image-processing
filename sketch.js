@@ -15,6 +15,8 @@ let ycbcrImage;
 let faceapi;
 let detections;
 
+let currentEffect = 'original';
+
 
 // by default all options are set to true
 const detectionOptions = {
@@ -49,6 +51,25 @@ function setup() {
   blueThreshold = createSlider(0, 255, 128);
   blueSliderText.position(419, 700, 130);
 }
+
+function keyTyped() {
+  // Change the currentEffect based on key press
+  switch (key) {
+    case '1':
+      currentEffect = 'greyscale';
+      break;
+    case '2':
+      currentEffect = 'blurred';
+      break;
+    case '3':
+      currentEffect = 'colorConverted';
+      break;
+    case '4':
+      currentEffect = 'pixelate';
+      break;
+  }
+}
+
 
 function draw() {
   background(255);
@@ -89,6 +110,8 @@ function draw() {
 
     // Display face detection results
     drawBox(detections, 0, 560);
+    // Display the selected effect on the detected face
+    applyEffectToFace(currentEffect, detections, 0, 560);
   }
 }
 
@@ -314,53 +337,66 @@ function drawBox(detections, offsetX, offsetY) {
   }
 }
 
-// function drawLandmarks(detections) {
-//   noFill();
-//   stroke(161, 95, 251);
-//   strokeWeight(2);
+function applyEffectToFace(effect, detections, offsetX, offsetY) {
+  if (detections) {
+    const alignedRect = detections.alignedRect;
+    const { _x, _y, _width, _height } = alignedRect._box;
 
-//   push();
-//   // mouth
-//   beginShape();
-//   detections.parts.mouth.forEach(item => {
-//     vertex(item._x, item._y);
-//   });
-//   endShape(CLOSE);
+    let faceImage;
 
-//   // nose
-//   beginShape();
-//   detections.parts.nose.forEach(item => {
-//     vertex(item._x, item._y);
-//   });
-//   endShape(CLOSE);
+    switch (effect) {
+      case 'greyscale':
+        faceImage = createGreyscaleImage(scaledPicture.get(_x, _y, _width, _height));
+        break;
+      case 'blurred':
+        let blurredImage = scaledPicture.get(_x, _y, _width, _height);
+        blurredImage.filter(BLUR, 5);
+        faceImage = blurredImage;
+        break;
+      case 'colorConverted':
+        faceImage = rgbToHsv(scaledPicture.get(_x, _y, _width, _height));
+        break;
+      case 'pixelate':
+        faceImage = pixelateFace(_x, _y, _width, _height);
+        break;
+      default:
+        faceImage = scaledPicture.get(_x, _y, _width, _height);
+    }
 
-//   // left eye
-//   beginShape();
-//   detections.parts.leftEye.forEach(item => {
-//     vertex(item._x, item._y);
-//   });
-//   endShape(CLOSE);
+    image(faceImage, _x + offsetX, _y + offsetY, _width, _height);
+  }
+}
 
-//   // right eye
-//   beginShape();
-//   detections.parts.rightEye.forEach(item => {
-//     vertex(item._x, item._y);
-//   });
-//   endShape(CLOSE);
+function pixelateFace(x, y, width, height) {
+  let pixelatedImage = scaledPicture.get(x, y, width, height);
 
-//   // right eyebrow
-//   beginShape();
-//   detections.parts.rightEyeBrow.forEach(item => {
-//     vertex(item._x, item._y);
-//   });
-//   endShape();
+  for (let i = x; i < x + width; i += 5) {
+    for (let j = y; j < y + height; j += 5) {
+      let averagePixel = calculateAveragePixel(i, j, 5);
+      pixelatedImage.set(i, j, averagePixel);
+    }
+  }
 
-//   // left eye
-//   beginShape();
-//   detections.parts.leftEyeBrow.forEach(item => {
-//     vertex(item._x, item._y);
-//   });
-//   endShape();
+  return pixelatedImage;
+}
 
-//   pop();
-// }
+function calculateAveragePixel(x, y, blockSize) {
+  let totalR = 0,
+    totalG = 0,
+    totalB = 0;
+
+  for (let i = 0; i < blockSize; i++) {
+    for (let j = 0; j < blockSize; j++) {
+      let pixelColor = scaledPicture.get(x + i, y + j);
+      totalR += red(pixelColor);
+      totalG += green(pixelColor);
+      totalB += blue(pixelColor);
+    }
+  }
+
+  let averageR = totalR / (blockSize * blockSize);
+  let averageG = totalG / (blockSize * blockSize);
+  let averageB = totalB / (blockSize * blockSize);
+
+  return color(averageR, averageG, averageB);
+}
