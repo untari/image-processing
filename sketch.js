@@ -18,6 +18,7 @@ let currentFaceModification = 'original';
 let hasTakenPicture = false;
 let hasapplyEffectToFace = false;
 
+let outimage;
 
 // by default all options are set to true
 const detectionOptions = {
@@ -349,7 +350,8 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
   if (detections) {
     const alignedRect = detections.alignedRect;
     const { _x, _y, _width, _height } = alignedRect._box;
-
+    // Initialize outimage before using it
+    outimage = createImage(_width, _height);
     let faceImage;
 
     switch (effect) {
@@ -370,9 +372,9 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
         }
         break;
       case 'pixelate':
-        console.log('pixelate');
-        if (currentFaceModification === 'pixelate') {
-          faceImage = scaledPicture.get(_x, _y, _width, _height);
+        if (effect === 'pixelate') {
+          applyPixelationToFace(faceImage,offsetX, offsetY);
+          
         }
         break;
       default:
@@ -388,4 +390,67 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
     image(faceImage, _x + offsetX, _y + offsetY, _width, _height);
     
   }
+}
+
+function applyPixelationToFace(faceImage, offsetX, offsetY) {
+  // Ensure we have a grayscale image for pixelation
+  faceImage = createGreyscaleImage(scaledPicture);
+
+  // Create a new image for the pixelated version
+  const pixelatedImage = createImage(faceImage.width, faceImage.height);
+  pixelatedImage.loadPixels();
+
+  // Calculate the block size based on desired effect
+  const blockSize = 5;
+
+  // Loop through each block
+  for (let y = 0; y < faceImage.height; y += blockSize) {
+    for (let x = 0; x < faceImage.width; x += blockSize) {
+      // Calculate average pixel intensity
+      let totalRed = 0;
+      let totalGreen = 0;
+      let totalBlue = 0;
+      let numPixels = 0;
+
+      for (let blockY = 0; blockY < blockSize; blockY++) {
+        for (let blockX = 0; blockX < blockSize; blockX++) {
+          const currentX = x + blockX;
+          const currentY = y + blockY;
+
+          if (currentX < faceImage.width && currentY < faceImage.height) {
+            const pixelIndex = (currentX + currentY * faceImage.width) * 4;
+            totalRed += faceImage.pixels[pixelIndex];
+            totalGreen += faceImage.pixels[pixelIndex + 1];
+            totalBlue += faceImage.pixels[pixelIndex + 2];
+            numPixels++;
+          }
+        }
+      }
+
+      const averageRed = totalRed / numPixels;
+      const averageGreen = totalGreen / numPixels;
+      const averageBlue = totalBlue / numPixels;
+
+      // Apply average color to all pixels in the block
+      for (let blockY = 0; blockY < blockSize; blockY++) {
+        for (let blockX = 0; blockX < blockSize; blockX++) {
+          const currentX = x + blockX;
+          const currentY = y + blockY;
+
+          if (currentX < pixelatedImage.width && currentY < pixelatedImage.height) {
+            const pixelIndex = (currentX + currentY * pixelatedImage.width) * 4;
+            pixelatedImage.pixels[pixelIndex] = averageRed;
+            pixelatedImage.pixels[pixelIndex + 1] = averageGreen;
+            pixelatedImage.pixels[pixelIndex + 2] = averageBlue;
+            pixelatedImage.pixels[pixelIndex + 3] = 255; // Maintain opacity
+          }
+        }
+      }
+    }
+  }
+
+  pixelatedImage.updatePixels();
+
+  // Draw the pixelated face on the canvas
+  image(pixelatedImage, offsetX, offsetY, faceImage.width, faceImage.height);
 }
