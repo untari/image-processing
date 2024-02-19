@@ -65,9 +65,9 @@ function keyTyped() {
     case '3':
       currentFaceModification = 'colorConverted';
       break;
-    // case '4':
-    //   currentFaceModification = 'pixelate';
-    //   break;
+    case '4':
+      currentFaceModification = 'pixelate';
+      break;
   }
 }
 
@@ -135,7 +135,7 @@ function takePicture() {
   blueChannel = extractChannelImage(scaledPicture, 'blue');
 
   // Convert to HSV color space
-  hsvImage = rgbToHsv(redChannel);
+  hsvImage = rgbToHsv(scaledPicture);
 
   // Convert to YCbCr color space
   ycbcrImage = rgbToYCbCr(redChannel);
@@ -341,7 +341,7 @@ function drawBox(detections, offsetX, offsetY) {
   }
 }
 
-function applyEffectToFace(effect, detections, offsetX, offsetY, debug = false) {
+function applyEffectToFace(effect, detections, offsetX, offsetY) {
   if (hasapplyEffectToFace) {
     console.log("Effect has already been applied. Skipping...");
     return;
@@ -365,12 +365,14 @@ function applyEffectToFace(effect, detections, offsetX, offsetY, debug = false) 
         break;
       case 'colorConverted':
         console.log('colorConverted');
-        faceImage = rgbToHsv(scaledPicture.get(_x, _y, _width, _height));
+        if (currentFaceModification === 'colorConverted') {
+          faceImage = hsvImage.get(_x, _y, _width, _height);
+        }
         break;
-      // case 'pixelate':
-      //   console.log('pixelate');
-      //   faceImage = pixelateFace(_x, _y, _width, _height);
-      //   break;
+      case 'pixelate':
+        console.log('pixelate');
+        faceImage = pixelateImage(scaledPicture.get(_x, _y, _width, _height), 5);
+        break;
       default:
         // Use the entire face region without specifying dimensions
         faceImage = scaledPicture.get(_x, _y, _width, _height);
@@ -385,38 +387,45 @@ function applyEffectToFace(effect, detections, offsetX, offsetY, debug = false) 
     
   }
 }
+function pixelateImage(src, blockSize) {
+  let pixelatedImage = src.get();
+  pixelatedImage.loadPixels();
 
-// // function pixelateFace(x, y, width, height) {
-// //   let pixelatedImage = createImage(width, height);
+  for (let x = 0; x < src.width; x += blockSize) {
+    for (let y = 0; y < src.height; y += blockSize) {
+      let sumR = 0,
+        sumG = 0,
+        sumB = 0,
+        count = 0;
 
-// //   for (let i = 0; i < width; i += 5) {
-// //     for (let j = 0; j < height; j += 5) {
-// //       let averagePixel = calculateAveragePixel(x + i, y + j, 5);
-// //       pixelatedImage.set(i, j, averagePixel);
-// //     }
-// //   }
+      // Calculate the sum of pixel values in the block
+      for (let i = x; i < x + blockSize && i < src.width; i++) {
+        for (let j = y; j < y + blockSize && j < src.height; j++) {
+          let index = (i + j * src.width) * 4;
+          sumR += src.pixels[index];
+          sumG += src.pixels[index + 1];
+          sumB += src.pixels[index + 2];
+          count++;
+        }
+      }
 
-// //   pixelatedImage.updatePixels();
-// //   return pixelatedImage;
-// // }
+      // Calculate the average pixel intensity in the block
+      let avgR = sumR / count;
+      let avgG = sumG / count;
+      let avgB = sumB / count;
 
-// function calculateAveragePixel(x, y, blockSize) {
-//   let totalR = 0,
-//     totalG = 0,
-//     totalB = 0;
+      // Paint the entire block with the average pixel intensity
+      for (let i = x; i < x + blockSize && i < src.width; i++) {
+        for (let j = y; j < y + blockSize && j < src.height; j++) {
+          let index = (i + j * src.width) * 4;
+          pixelatedImage.pixels[index] = avgR;
+          pixelatedImage.pixels[index + 1] = avgG;
+          pixelatedImage.pixels[index + 2] = avgB;
+        }
+      }
+    }
+  }
 
-//   for (let i = 0; i < blockSize; i++) {
-//     for (let j = 0; j < blockSize; j++) {
-//       let pixelColor = scaledPicture.get(x + i, y + j);
-//       totalR += red(pixelColor);
-//       totalG += green(pixelColor);
-//       totalB += blue(pixelColor);
-//     }
-//   }
-
-//   let averageR = totalR / (blockSize * blockSize);
-//   let averageG = totalG / (blockSize * blockSize);
-//   let averageB = totalB / (blockSize * blockSize);
-
-//   return color(averageR, averageG, averageB);
-// }
+  pixelatedImage.updatePixels();
+  return pixelatedImage;
+}
