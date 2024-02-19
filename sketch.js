@@ -371,7 +371,9 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
         break;
       case 'pixelate':
         console.log('pixelate');
-        faceImage = pixelateImage(scaledPicture.get(_x, _y, _width, _height), 5);
+        if (currentFaceModification === 'pixelate') {
+          faceImage = scaledPicture.get(_x, _y, _width, _height);
+        }
         break;
       default:
         // Use the entire face region without specifying dimensions
@@ -386,46 +388,4 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
     image(faceImage, _x + offsetX, _y + offsetY, _width, _height);
     
   }
-}
-function pixelateImage(src, blockSize) {
-  let pixelatedImage = src.get();
-  pixelatedImage.loadPixels();
-
-  for (let x = 0; x < src.width; x += blockSize) {
-    for (let y = 0; y < src.height; y += blockSize) {
-      let sumR = 0,
-        sumG = 0,
-        sumB = 0,
-        count = 0;
-
-      // Calculate the sum of pixel values in the block
-      for (let i = x; i < x + blockSize && i < src.width; i++) {
-        for (let j = y; j < y + blockSize && j < src.height; j++) {
-          let index = (i + j * src.width) * 4;
-          sumR += src.pixels[index];
-          sumG += src.pixels[index + 1];
-          sumB += src.pixels[index + 2];
-          count++;
-        }
-      }
-
-      // Calculate the average pixel intensity in the block
-      let avgR = sumR / count;
-      let avgG = sumG / count;
-      let avgB = sumB / count;
-
-      // Paint the entire block with the average pixel intensity
-      for (let i = x; i < x + blockSize && i < src.width; i++) {
-        for (let j = y; j < y + blockSize && j < src.height; j++) {
-          let index = (i + j * src.width) * 4;
-          pixelatedImage.pixels[index] = avgR;
-          pixelatedImage.pixels[index + 1] = avgG;
-          pixelatedImage.pixels[index + 2] = avgB;
-        }
-      }
-    }
-  }
-
-  pixelatedImage.updatePixels();
-  return pixelatedImage;
 }
