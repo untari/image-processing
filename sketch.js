@@ -114,7 +114,7 @@ function draw() {
     // Display face detection results
     drawBox(detections, 0, 560);
 
-    applyEffectToFace(currentFaceModification, detections, 200, 560);
+    applyEffectToFace(currentFaceModification, detections, 0, 560);
   
   }
 }
@@ -326,7 +326,7 @@ function gotResults(err, result) {
   if (detections) {
       // Draw face detection on the specified area of the canvas
       drawBox(detections, 0, 560, 160, 120);
-    
+      alert("No face detected! Please try again.");
   }
 }
 
@@ -341,7 +341,6 @@ function drawBox(detections, offsetX, offsetY) {
     rect(_x + offsetX, _y + offsetY, _width, _height);
   }
 }
-
 function applyEffectToFace(effect, detections, offsetX, offsetY) {
   if (hasapplyEffectToFace) {
     console.log("Effect has already been applied. Skipping...");
@@ -372,11 +371,10 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
         }
         break;
       case 'pixelate':
-        if (effect === 'pixelate') {
-          applyPixelationToFace(faceImage,offsetX, offsetY);
           
-        }
-        break;
+        faceImage = scaledPicture.get(_x, _y, _width, _height); // Get the original face image
+        faceImage = applyPixelationToFace(faceImage);
+          break;
       default:
         // Use the entire face region without specifying dimensions
         faceImage = scaledPicture.get(_x, _y, _width, _height);
@@ -450,7 +448,5 @@ function applyPixelationToFace(faceImage, offsetX, offsetY) {
   }
 
   pixelatedImage.updatePixels();
-
-  // Draw the pixelated face on the canvas
-  image(pixelatedImage, offsetX, offsetY, faceImage.width, faceImage.height);
+  return pixelatedImage;
 }
