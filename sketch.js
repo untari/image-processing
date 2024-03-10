@@ -1,3 +1,4 @@
+// Declare variables for video, pictures, channels, and segmented images
 let video;
 let picture;
 let scaledPicture;
@@ -8,54 +9,61 @@ let segmentedImages = {
   hsv: null,
   ycbcr: null
 };
+
+// Declare threshold values for segmentation
 let redThreshold, greenThreshold, blueThreshold;
+
+// Declare images for HSV and YCbCr color spaces
 let hsvImage;
 let ycbcrImage;
+let segmentedHsvImage;
+
+// Initialize faceapi and face detection results
 let faceapi;
 let detections;
 
+// Track the current face modification and capture status
 let currentFaceModification = 'original';
 let hasTakenPicture = false;
 let hasapplyEffectToFace = false;
 
+// Declare an image for output modifications
 let outimage;
 
-// by default all options are set to true
+// Define face detection options
 const detectionOptions = {
   withLandmarks: true,
   withDescriptors: false,
 };
 
+// Setup function for initializing the canvas, video, and faceapi
 function setup() {
-  createCanvas(640 * 2, 680);
+  createCanvas(840 * 2, 680);
   video = createCapture(VIDEO);
   video.hide();
 
-  // Initialize faceapi
   faceapi = ml5.faceApi(detectionOptions, modelReady);
 
-  // Create a button element
   const captureButton = createButton('Capture Image');
+  captureButton.position(0, 100)
   captureButton.id('captureButton');
   captureButton.mousePressed(takePicture);
 
-  let redSliderText = createP('Red');
-  let greenSliderText = createP('Green');
-  let blueSliderText = createP('Blue');
-
-  // Create sliders for threshold control
   redThreshold = createSlider(0, 255, 128);
-  redSliderText.position(139, 700, 130);
+  redThreshold.position(0, 230 + 120 + 40); // Adjusted position
 
   greenThreshold = createSlider(0, 255, 128);
-  greenSliderText.position(270, 700, 130);
+  greenThreshold.position(200, 230 + 120 + 40); // Adjusted position
 
   blueThreshold = createSlider(0, 255, 128);
-  blueSliderText.position(419, 700, 130);
+  blueThreshold.position(400, 230 + 120 + 40); // Adjusted position
+
+  // thresholdSlider = createSlider(0, 255, staticThreshold);
+  // thresholdSlider.position(550, 700, 130);
 }
 
+// Handle key presses to change face modification effect
 function keyTyped() {
-  // Change the currentFaceModification based on key press
   switch (key) {
     case '1':
       currentFaceModification = 'greyscale';
@@ -72,11 +80,11 @@ function keyTyped() {
   }
 }
 
-
+// Main drawing function
 function draw() {
   background(255);
 
-  // Display the webcam image in the grid at the position titled "Webcam image"
+  // Display the webcam image
   image(video, 0, 0, 160, 120);
 
   if (picture) {
@@ -99,53 +107,61 @@ function draw() {
     // Display the original image
     image(scaledPicture, 0, 420, 160, 120);
 
+    // // Display the HSV image if defined
+    // if (hsvImage) {
+    //   image(hsvImage, 200, 420, 160, 120);
+    // }
+
+    // // Display the YCbCr image if defined
+    // if (ycbcrImage) {
+    //   image(ycbcrImage, 400, 420, 160, 120);
+    // }
     // Display the HSV image if defined
     if (hsvImage) {
-      image(hsvImage, 200, 420, 160, 120);    
+      image(hsvImage, 200, 420, 160, 120);
+
+      // Perform segmentation on the HSV image
+      let segmentedHsvImage = segmentImageHSV(hsvImage);
+      image(segmentedHsvImage, 200, 560, 160, 120);
     }
     // Display the YCbCr image if defined
     if (ycbcrImage) {
       image(ycbcrImage, 400, 420, 160, 120);
-    }
 
+      // Perform segmentation on the YCbCr image
+      let segmentedYcbcrImage = segmentImageYCbCr(ycbcrImage);
+      image(segmentedYcbcrImage, 400, 560, 160, 120);
+    }
     // Display the original image
     image(scaledPicture, 0, 560, 160, 120);
 
     // Display face detection results
     drawBox(detections, 0, 560);
 
+    // Apply selected effect to face
     applyEffectToFace(currentFaceModification, detections, 0, 560);
-  
   }
 }
 
+// Function to capture a picture from the webcam
 function takePicture() {
-  // Take a picture when the button is clicked
   picture = video.get();
-
-  // Scale the picture to 160 x 120 pixels
   scaledPicture = picture.get();
   scaledPicture.resize(160, 120);
 
-  // Create a greyscale version with increased brightness
   greyPicture = createGreyscaleImage(picture);
-
-  // Split the scaled picture into R, G, B channels
   redChannel = extractChannelImage(scaledPicture, 'red');
   greenChannel = extractChannelImage(scaledPicture, 'green');
   blueChannel = extractChannelImage(scaledPicture, 'blue');
 
-  // Convert to HSV color space
   hsvImage = rgbToHsv(scaledPicture);
-
-  // Convert to YCbCr color space
   ycbcrImage = rgbToYCbCr(redChannel);
 
-  // Perform face detection on the specified image
   faceapi.detectSingle(scaledPicture, gotResults);
   hasTakenPicture = true;
 }
 
+// Function to create a greyscale image with increased brightness
 function createGreyscaleImage(src) {
   let greyImage = src.get();
   greyImage.loadPixels();
@@ -155,13 +171,9 @@ function createGreyscaleImage(src) {
     let g = greyImage.pixels[i + 1];
     let b = greyImage.pixels[i + 2];
 
-    // Convert to grayscale using luminosity method
     let grayValue = 0.299 * r + 0.587 * g + 0.114 * b;
-
-    // Increase brightness by 20% and prevent pixel intensity
     let increasedBrightness = constrain(grayValue * 1.2, 0, 255);
 
-    // Assign the new value
     greyImage.pixels[i] = increasedBrightness;
     greyImage.pixels[i + 1] = increasedBrightness;
     greyImage.pixels[i + 2] = increasedBrightness;
@@ -171,11 +183,12 @@ function createGreyscaleImage(src) {
   return greyImage;
 }
 
+// Function to extract a specific color channel from an image
 function extractChannelImage(img, channel) {
   let extractedChannel = img.get();
   extractedChannel.loadPixels();
-  for (let i = 0; i < extractedChannel.pixels.length; i += 4) {
 
+  for (let i = 0; i < extractedChannel.pixels.length; i += 4) {
     if (channel === 'red') {
       extractedChannel.pixels[i + 1] = 0;
       extractedChannel.pixels[i + 2] = 0;
@@ -187,10 +200,12 @@ function extractChannelImage(img, channel) {
       extractedChannel.pixels[i + 1] = 0;
     }
   }
+
   extractedChannel.updatePixels();
   return extractedChannel;
 }
 
+// Function to convert an RGB image to HSV color space
 function rgbToHsv(src) {
   let hsv = createImage(src.width, src.height);
   hsv.loadPixels();
@@ -203,13 +218,15 @@ function rgbToHsv(src) {
       hsv.pixels[index] = hsb[0];
       hsv.pixels[index + 1] = hsb[1];
       hsv.pixels[index + 2] = hsb[2];
-      hsv.pixels[index + 3] = alpha(c); // Alpha value
+      hsv.pixels[index + 3] = alpha(c);
     }
   }
+
   hsv.updatePixels();
   return hsv;
 }
 
+// Function to convert an RGB image to YCbCr color space
 function rgbToYCbCr(src) {
   let ycbcr = createImage(src.width, src.height);
   ycbcr.loadPixels();
@@ -222,13 +239,15 @@ function rgbToYCbCr(src) {
       ycbcr.pixels[index] = ycbcrValues[0];
       ycbcr.pixels[index + 1] = ycbcrValues[1];
       ycbcr.pixels[index + 2] = ycbcrValues[2];
-      ycbcr.pixels[index + 3] = alpha(c); // Alpha value
+      ycbcr.pixels[index + 3] = alpha(c);
     }
   }
+
   ycbcr.updatePixels();
   return ycbcr;
 }
 
+// Function to convert RGB to HSB values
 function rgbToHsb(r, g, b) {
   let max = Math.max(r, g, b);
   let min = Math.min(r, g, b);
@@ -238,7 +257,7 @@ function rgbToHsb(r, g, b) {
   s = max === 0 ? 0 : d / max;
 
   if (max === min) {
-    h = 0; // achromatic
+    h = 0;
   } else {
     switch (max) {
       case r: h = (g - b) / d + (g < b ? 6 : 0); break;
@@ -251,6 +270,7 @@ function rgbToHsb(r, g, b) {
   return [h * 360, s * 100, v];
 }
 
+// Function to convert RGB to YCbCr values
 function rgbToYCbCrValues(r, g, b) {
   let y = 0.299 * r + 0.587 * g + 0.114 * b;
   let cb = 0.564 * (b - y);
@@ -259,6 +279,7 @@ function rgbToYCbCrValues(r, g, b) {
   return [y, cb, cr];
 }
 
+// Function to segment an image based on slider thresholds
 function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
   let segmentedRedImage = createImage(src.width, src.height);
   let segmentedGreenImage = createImage(src.width, src.height);
@@ -281,19 +302,16 @@ function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
 
       let index = (x + y * src.width) * 4;
 
-      // Segmented Red channel
       segmentedRedImage.pixels[index] = segmentedRedValue;
       segmentedRedImage.pixels[index + 1] = 0;
       segmentedRedImage.pixels[index + 2] = 0;
       segmentedRedImage.pixels[index + 3] = alpha(c);
 
-      // Segmented Green channel
       segmentedGreenImage.pixels[index] = 0;
       segmentedGreenImage.pixels[index + 1] = segmentedGreenValue;
       segmentedGreenImage.pixels[index + 2] = 0;
       segmentedGreenImage.pixels[index + 3] = alpha(c);
 
-      // Segmented Blue channel
       segmentedBlueImage.pixels[index] = 0;
       segmentedBlueImage.pixels[index + 1] = 0;
       segmentedBlueImage.pixels[index + 2] = segmentedBlueValue;
@@ -311,25 +329,87 @@ function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
     blue: segmentedBlueImage
   };
 }
+
+function segmentImageHSV(src) {
+  let segmentedImage = createImage(src.width, src.height);
+  segmentedImage.loadPixels();
+
+  for (let x = 0; x < src.width; x++) {
+    for (let y = 0; y < src.height; y++) {
+      let index = (x + y * src.width) * 4;
+      
+      // Calculate HSV values
+      let hueValue =src.pixels[index];
+      let saturationValue = src.pixels[index + 1];
+      let brightnessValue = src.pixels[index + 2];
+
+      // Segmentation criteria (Adjust these!)
+      let isSegmented = (hueValue >= 0 && hueValue <= 200) && 
+                        (saturationValue >= 0 && saturationValue <= 255) && 
+                        (brightnessValue >= 0 && brightnessValue <= 255);
+
+      // Segmentation
+      let segmentedPixelValue = isSegmented ? 255 : 0;
+      segmentedImage.pixels[index] = segmentedPixelValue;
+      segmentedImage.pixels[index + 1] = segmentedPixelValue;
+      segmentedImage.pixels[index + 2] = segmentedPixelValue;
+      segmentedImage.pixels[index + 3] = src.pixels[index + 3]; // Alpha 
+    }
+  }
+  segmentedImage.updatePixels();
+  return segmentedImage;
+}
+
+
+function segmentImageYCbCr(src) {
+  let segmentedImage = createImage(src.width, src.height);
+  segmentedImage.loadPixels();
+
+  for (let x = 0; x < src.width; x++) {
+    for (let y = 0; y < src.height; y++) {
+      let index = (x + y * src.width) * 4;
+      let yValue = src.pixels[index];
+      let cbValue = src.pixels[index + 1];
+      let crValue = src.pixels[index + 2];
+
+      // Define your segmentation criteria here
+      // For example, you can segment based on Y range (e.g., 50-200), Cb range, and Cr range
+      let isSegmented = (yValue >= 50 && yValue <= 200) &&
+                        (cbValue >= 0 && cbValue <= 255) &&
+                        (crValue >= 0 && crValue <= 255);
+
+      let segmentedPixelValue = isSegmented ? 255 : 0;
+
+      segmentedImage.pixels[index] = segmentedPixelValue;
+      segmentedImage.pixels[index + 1] = segmentedPixelValue;
+      segmentedImage.pixels[index + 2] = segmentedPixelValue;
+      segmentedImage.pixels[index + 3] = src.pixels[index + 3]; // Alpha value
+    }
+  }
+
+  segmentedImage.updatePixels();
+  return segmentedImage;
+}
+// Callback function when face detection model is ready
 function modelReady() {
   console.log("Face detection model ready!");
 }
 
-
+// Callback function when face detection results are obtained
 function gotResults(err, result) {
   if (err) {
     console.log(err);
     return;
   }
-  console.log(typeof result)
+
   detections = result;
   if (detections) {
-      // Draw face detection on the specified area of the canvas
-      drawBox(detections, 0, 560, 160, 120);
-      alert("No face detected! Please try again.");
+    drawBox(detections, 0, 560, 160, 120);
+    alert("No face detected! Please try again.");
   }
 }
 
+// Function to draw a rectangle around detected face
 function drawBox(detections, offsetX, offsetY) {
   if (detections) {
     const alignedRect = detections.alignedRect;
@@ -341,6 +421,8 @@ function drawBox(detections, offsetX, offsetY) {
     rect(_x + offsetX, _y + offsetY, _width, _height);
   }
 }
+
+// Function to apply the selected effect to the detected face
 function applyEffectToFace(effect, detections, offsetX, offsetY) {
   if (hasapplyEffectToFace) {
     console.log("Effect has already been applied. Skipping...");
@@ -349,62 +431,45 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
   if (detections) {
     const alignedRect = detections.alignedRect;
     const { _x, _y, _width, _height } = alignedRect._box;
-    // Initialize outimage before using it
     outimage = createImage(_width, _height);
     let faceImage;
 
     switch (effect) {
       case 'greyscale':
-        console.log('greyscale');
         faceImage = createGreyscaleImage(scaledPicture.get(_x, _y, _width, _height));
         break;
       case 'blurred':
-        console.log('blurred');
         let blurredImage = scaledPicture.get(_x, _y, _width, _height);
         blurredImage.filter(BLUR, 15);
         faceImage = blurredImage;
         break;
       case 'colorConverted':
-        console.log('colorConverted');
         if (currentFaceModification === 'colorConverted') {
           faceImage = hsvImage.get(_x, _y, _width, _height);
         }
         break;
       case 'pixelate':
-          
-        faceImage = scaledPicture.get(_x, _y, _width, _height); // Get the original face image
+        faceImage = scaledPicture.get(_x, _y, _width, _height);
         faceImage = applyPixelationToFace(faceImage);
-          break;
+        break;
       default:
-        // Use the entire face region without specifying dimensions
         faceImage = scaledPicture.get(_x, _y, _width, _height);
     }
 
-      console.log("x + offsetX:", _x + offsetX);
-      console.log("y + offsetY:", _y + offsetY);
-      console.log("width:", _width);
-      console.log("height:", _height);
-    
     image(faceImage, _x + offsetX, _y + offsetY, _width, _height);
-    
   }
 }
 
+// Function to apply pixelation effect to a face
 function applyPixelationToFace(faceImage, offsetX, offsetY) {
-  // Ensure we have a grayscale image for pixelation
   faceImage = createGreyscaleImage(scaledPicture);
-
-  // Create a new image for the pixelated version
   const pixelatedImage = createImage(faceImage.width, faceImage.height);
   pixelatedImage.loadPixels();
 
-  // Calculate the block size based on desired effect
   const blockSize = 5;
 
-  // Loop through each block
   for (let y = 0; y < faceImage.height; y += blockSize) {
     for (let x = 0; x < faceImage.width; x += blockSize) {
-      // Calculate average pixel intensity
       let totalRed = 0;
       let totalGreen = 0;
       let totalBlue = 0;
@@ -429,7 +494,6 @@ function applyPixelationToFace(faceImage, offsetX, offsetY) {
       const averageGreen = totalGreen / numPixels;
       const averageBlue = totalBlue / numPixels;
 
-      // Apply average color to all pixels in the block
       for (let blockY = 0; blockY < blockSize; blockY++) {
         for (let blockX = 0; blockX < blockSize; blockX++) {
           const currentX = x + blockX;
@@ -440,7 +504,7 @@ function applyPixelationToFace(faceImage, offsetX, offsetY) {
             pixelatedImage.pixels[pixelIndex] = averageRed;
             pixelatedImage.pixels[pixelIndex + 1] = averageGreen;
             pixelatedImage.pixels[pixelIndex + 2] = averageBlue;
-            pixelatedImage.pixels[pixelIndex + 3] = 255; // Maintain opacity
+            pixelatedImage.pixels[pixelIndex + 3] = 255;
           }
         }
       }
