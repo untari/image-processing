@@ -27,9 +27,6 @@ let currentFaceModification = 'original';
 let hasTakenPicture = false;
 let hasapplyEffectToFace = false;
 
-// Declare an image for output modifications
-let outimage;
-
 // Define face detection options
 const detectionOptions = {
   withLandmarks: true,
@@ -45,7 +42,7 @@ function setup() {
   faceapi = ml5.faceApi(detectionOptions, modelReady);
 
   const captureButton = createButton('Capture Image');
-  captureButton.position(0, 100)
+  captureButton.position(0, 116)
   captureButton.id('captureButton');
   captureButton.mousePressed(takePicture);
 
@@ -57,9 +54,6 @@ function setup() {
 
   blueThreshold = createSlider(0, 255, 128);
   blueThreshold.position(400, 230 + 120 + 40); // Adjusted position
-
-  // thresholdSlider = createSlider(0, 255, staticThreshold);
-  // thresholdSlider.position(550, 700, 130);
 }
 
 // Handle key presses to change face modification effect
@@ -88,6 +82,7 @@ function draw() {
   image(video, 0, 0, 160, 120);
 
   if (picture) {
+    image(video, 0, 0, 160, 120);
     // Display the greyscale version
     image(greyPicture, 200, 0, 160, 120);
 
@@ -107,16 +102,6 @@ function draw() {
     // Display the original image
     image(scaledPicture, 0, 420, 160, 120);
 
-    // // Display the HSV image if defined
-    // if (hsvImage) {
-    //   image(hsvImage, 200, 420, 160, 120);
-    // }
-
-    // // Display the YCbCr image if defined
-    // if (ycbcrImage) {
-    //   image(ycbcrImage, 400, 420, 160, 120);
-    // }
-    // Display the HSV image if defined
     if (hsvImage) {
       image(hsvImage, 200, 420, 160, 120);
 
@@ -133,8 +118,7 @@ function draw() {
       image(segmentedYcbcrImage, 400, 560, 160, 120);
     }
     // Display the original image
-    image(scaledPicture, 0, 560, 160, 120);
-
+    image(video, 0, 560, 160, 120);
     // Display face detection results
     drawBox(detections, 0, 560);
 
@@ -159,6 +143,9 @@ function takePicture() {
 
   faceapi.detectSingle(scaledPicture, gotResults);
   hasTakenPicture = true;
+
+  // video = createCapture(VIDEO);
+  // video.hide();
 }
 
 // Function to create a greyscale image with increased brightness
@@ -405,8 +392,9 @@ function gotResults(err, result) {
   detections = result;
   if (detections) {
     drawBox(detections, 0, 560, 160, 120);
-    alert("No face detected! Please try again.");
+    alert("No face detected! Please try again."); 
   }
+  
 }
 
 // Function to draw a rectangle around detected face
@@ -425,7 +413,7 @@ function drawBox(detections, offsetX, offsetY) {
 // Function to apply the selected effect to the detected face
 function applyEffectToFace(effect, detections, offsetX, offsetY) {
   if (hasapplyEffectToFace) {
-    console.log("Effect has already been applied. Skipping...");
+    console.log("Effect has already been applied");
     return;
   }
   if (detections) {
