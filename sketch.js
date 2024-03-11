@@ -17,6 +17,7 @@ let redThreshold, greenThreshold, blueThreshold;
 let hsvImage;
 let ycbcrImage;
 let segmentedHsvImage;
+let segmentedYcbcrImage;
 
 // Initialize faceapi and face detection results
 let faceapi;
@@ -27,6 +28,10 @@ let currentFaceModification = 'original';
 
 let hasTakenPicture = false;
 let hasapplyEffectToFace = false;
+
+// Declare a variable to store the selected grayscale effect
+let selectedGrayscaleEffect = 'original';
+let liveForExtension = false;
 
 // Define face detection options
 const detectionOptions = {
@@ -57,6 +62,7 @@ function setup() {
 
   blueThreshold = createSlider(0, 255, 128);
   blueThreshold.position(400, 230 + 120 + 40);
+
 }
 
 // Handle key presses to change face modification effect
@@ -79,7 +85,6 @@ function keyTyped() {
 
 function draw() {
   background(255);
-
   // Display the webcam image
   image(video, 0, 0, 160, 120);
 
@@ -127,10 +132,15 @@ function draw() {
     // Apply selected effect to face
     applyEffectToFace(currentFaceModification, detections, 0, 560);
   }
+
+  // Call extensionLive to display live video with selected grayscale effect
+  extensionLive();
 }
 
 // Function to capture a picture from the webcam
 function takePicture() {
+  capturing = true;
+  liveForExtension = false; // Reset the flag for other cases
   // Capture a still frame from the webcam and store it in 'picture'
   picture = video.get();
   // Create a copy of the captured image 
@@ -152,13 +162,51 @@ function takePicture() {
   faceapi.detectSingle(scaledPicture, gotResults);
   // Set a flag
   hasTakenPicture = true;
-
-  // edgeDetectedImage = applyEdgeDetection(greyPicture);
-
   // video = createCapture(VIDEO);
   // video.hide();
 }
+function extensionLive() {
+  // Create a dropdown menu to select grayscale effect
+  const dropdown = createSelect();
+  dropdown.position(400, 116);
+  dropdown.id('grayscaleDropdown');
+  dropdown.option('Original');
+  dropdown.option('Grayscale');
+  dropdown.option('RedChannel');
+  dropdown.option('BlueChannel');
+  dropdown.option('GreenChannel');
+  // dropdown.option('Segmented HSV');
+  // dropdown.option('Segmented HSV');
 
+  // Event listener to update the selected grayscale effect
+  dropdown.changed(() => {
+    selectedGrayscaleEffect = dropdown.value();
+    liveForExtension = true; // Set the flag to true when the dropdown changes
+  });
+
+  // Handle the selected grayscale effect for live video
+  if (liveForExtension) {
+    switch (selectedGrayscaleEffect) {
+      case 'Original':
+        image(video, 400, 0, 160, 120);
+        break;
+      case 'Grayscale':
+        image(createGreyscaleImage(video), 400, 0, 160, 120);
+        break;
+        case 'RedChannel':
+          image(extractChannelImage(video, 'red'), 400, 0, 160, 120);
+          break;
+        case 'BlueChannel':
+          image(extractChannelImage(video, 'blue'), 400, 0, 160, 120);
+          break;
+        case 'GreenChannel':
+          image(extractChannelImage(video, 'green'), 400, 0, 160, 120);
+          break;
+      default:
+        image(video, 400, 0, 160, 120);
+    }
+  }
+}
 // Function to create a greyscale image with increased brightness
 function createGreyscaleImage(src) {
   // Create a copy of the source image
@@ -438,7 +486,7 @@ function gotResults(err, result) {
   // If detected draw bounding box
   if (detections) {
     drawBox(detections, 0, 560, 160, 120);
-    alert("No face detected! Please try again."); 
+    alert("face detected!"); 
   }
 }
 
@@ -492,8 +540,8 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
         break;
       case 'pixelate':
         // Apply pixelate
-        faceImage = scaledPicture.get(_x, _y, _width, _height);
         faceImage = applyPixelationToFace(faceImage);
+        faceImage = faceImage.get(_x, _y, _width, _height);
         break;
       default:
         faceImage = scaledPicture.get(_x, _y, _width, _height);
