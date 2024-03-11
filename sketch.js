@@ -24,6 +24,7 @@ let detections;
 
 // Track the current face modification and capture status
 let currentFaceModification = 'original';
+
 let hasTakenPicture = false;
 let hasapplyEffectToFace = false;
 
@@ -41,19 +42,21 @@ function setup() {
 
   faceapi = ml5.faceApi(detectionOptions, modelReady);
 
+  // Create a button to take snapshot
   const captureButton = createButton('Capture Image');
   captureButton.position(0, 116)
   captureButton.id('captureButton');
   captureButton.mousePressed(takePicture);
 
+  // Create red, green, blue sliders and define the positions
   redThreshold = createSlider(0, 255, 128);
-  redThreshold.position(0, 230 + 120 + 40); // Adjusted position
+  redThreshold.position(0, 230 + 120 + 40);
 
   greenThreshold = createSlider(0, 255, 128);
-  greenThreshold.position(200, 230 + 120 + 40); // Adjusted position
+  greenThreshold.position(200, 230 + 120 + 40);
 
   blueThreshold = createSlider(0, 255, 128);
-  blueThreshold.position(400, 230 + 120 + 40); // Adjusted position
+  blueThreshold.position(400, 230 + 120 + 40);
 }
 
 // Handle key presses to change face modification effect
@@ -74,7 +77,6 @@ function keyTyped() {
   }
 }
 
-// Main drawing function
 function draw() {
   background(255);
 
@@ -82,14 +84,13 @@ function draw() {
   image(video, 0, 0, 160, 120);
 
   if (picture) {
-    image(video, 0, 0, 160, 120);
     // Display the greyscale version
     image(greyPicture, 200, 0, 160, 120);
 
     // Perform segmentation with individual channel thresholds
     let segmentedImages = segmentImageSliders(scaledPicture, redThreshold.value(), greenThreshold.value(), blueThreshold.value());
 
-    // Display the R, G, B channels with threshold control
+    // Display image from the R, G, B channels with threshold control
     image(redChannel, 0, 140, 160, 120);
     image(greenChannel, 200, 140, 160, 120);
     image(blueChannel, 400, 140, 160, 120);
@@ -101,7 +102,7 @@ function draw() {
 
     // Display the original image
     image(scaledPicture, 0, 420, 160, 120);
-
+    // Display the color conversion(HSV) and segmented HSV image
     if (hsvImage) {
       image(hsvImage, 200, 420, 160, 120);
 
@@ -109,7 +110,7 @@ function draw() {
       let segmentedHsvImage = segmentImageHSV(hsvImage);
       image(segmentedHsvImage, 200, 560, 160, 120);
     }
-    // Display the YCbCr image if defined
+    // Display the YCbCr image and Segmented YcbCr image
     if (ycbcrImage) {
       image(ycbcrImage, 400, 420, 160, 120);
 
@@ -117,6 +118,7 @@ function draw() {
       let segmentedYcbcrImage = segmentImageYCbCr(ycbcrImage);
       image(segmentedYcbcrImage, 400, 560, 160, 120);
     }
+
     // Display the original image
     image(video, 0, 560, 160, 120);
     // Display face detection results
@@ -129,20 +131,29 @@ function draw() {
 
 // Function to capture a picture from the webcam
 function takePicture() {
+  // Capture a still frame from the webcam and store it in 'picture'
   picture = video.get();
+  // Create a copy of the captured image 
   scaledPicture = picture.get();
+  // Resize the copy to a (160x120) as the requirements
   scaledPicture.resize(160, 120);
-
+  // Create a grayscale version
   greyPicture = createGreyscaleImage(picture);
+  // Extract redd, blue, green channel images
   redChannel = extractChannelImage(scaledPicture, 'red');
   greenChannel = extractChannelImage(scaledPicture, 'green');
   blueChannel = extractChannelImage(scaledPicture, 'blue');
 
+  // Convert the scaledPicture to HSV and YcbCr color space
   hsvImage = rgbToHsv(scaledPicture);
   ycbcrImage = rgbToYCbCr(redChannel);
 
+  // Initiate face detection on the picture and call gotResults when is complete
   faceapi.detectSingle(scaledPicture, gotResults);
+  // Set a flag
   hasTakenPicture = true;
+
+  // edgeDetectedImage = applyEdgeDetection(greyPicture);
 
   // video = createCapture(VIDEO);
   // video.hide();
@@ -150,17 +161,20 @@ function takePicture() {
 
 // Function to create a greyscale image with increased brightness
 function createGreyscaleImage(src) {
+  // Create a copy of the source image
   let greyImage = src.get();
   greyImage.loadPixels();
 
+  // Get the red value of the current pixel and green, blue value
   for (let i = 0; i < greyImage.pixels.length; i += 4) {
     let r = greyImage.pixels[i];
     let g = greyImage.pixels[i + 1];
     let b = greyImage.pixels[i + 2];
-
+    // Calculate weighted average for grayscale conversion
     let grayValue = 0.299 * r + 0.587 * g + 0.114 * b;
+    // Increase brightness
     let increasedBrightness = constrain(grayValue * 1.2, 0, 255);
-
+    // Set the new grayscale value
     greyImage.pixels[i] = increasedBrightness;
     greyImage.pixels[i + 1] = increasedBrightness;
     greyImage.pixels[i + 2] = increasedBrightness;
@@ -175,7 +189,10 @@ function extractChannelImage(img, channel) {
   let extractedChannel = img.get();
   extractedChannel.loadPixels();
 
+  // Iterate through Pixels, the loop goes through every pixel in the image 
   for (let i = 0; i < extractedChannel.pixels.length; i += 4) {
+    // Checks which color channel (red, green, or blue) is requested
+    // For the unselected, the corresponding pixel values in the extractedChannel's pixel array are set to 0
     if (channel === 'red') {
       extractedChannel.pixels[i + 1] = 0;
       extractedChannel.pixels[i + 2] = 0;
@@ -188,6 +205,7 @@ function extractChannelImage(img, channel) {
     }
   }
 
+  // Update and return
   extractedChannel.updatePixels();
   return extractedChannel;
 }
@@ -197,11 +215,16 @@ function rgbToHsv(src) {
   let hsv = createImage(src.width, src.height);
   hsv.loadPixels();
 
+  // Use nested loops to go through each pixel in the source (RGB) image
   for (let x = 0; x < src.width; x++) {
     for (let y = 0; y < src.height; y++) {
+      // Get the color (R, G, B, alpha) of the pixel
       let c = src.get(x, y);
+      // Convert RGB values to HSV using a helper rgbToHsb function
       let hsb = rgbToHsb(red(c), green(c), blue(c));
+      // Calculate the index in the pixel array
       let index = (x + y * hsv.width) * 4;
+      // Assign HSV values to the corresponding pixel in the HSV image
       hsv.pixels[index] = hsb[0];
       hsv.pixels[index + 1] = hsb[1];
       hsv.pixels[index + 2] = hsb[2];
@@ -220,9 +243,13 @@ function rgbToYCbCr(src) {
 
   for (let x = 0; x < src.width; x++) {
     for (let y = 0; y < src.height; y++) {
+      // Get the color (R, G, B, alpha) of the pixel
       let c = src.get(x, y);
+      // Convert RGB values to HSV using a helper rgbToYCbCrValues function
       let ycbcrValues = rgbToYCbCrValues(red(c), green(c), blue(c));
+      // Calculate the index in the pixel array
       let index = (x + y * ycbcr.width) * 4;
+      // Assign YcbCr values to the corresponding pixel in the YcbCr image
       ycbcr.pixels[index] = ycbcrValues[0];
       ycbcr.pixels[index + 1] = ycbcrValues[1];
       ycbcr.pixels[index + 2] = ycbcrValues[2];
@@ -236,13 +263,16 @@ function rgbToYCbCr(src) {
 
 // Function to convert RGB to HSB values
 function rgbToHsb(r, g, b) {
+  // Find Max and Min values among the red, green, and blue components
   let max = Math.max(r, g, b);
   let min = Math.min(r, g, b);
+  // Initialize 'v' (brightness) to the maximum value
   let h, s, v = max;
-
+  // Calculate the difference between max and min and saturation
   let d = max - min;
   s = max === 0 ? 0 : d / max;
 
+  // If max-min = hue is 0(no color, or greyscale), otherwhise calculates the hue accordingly
   if (max === min) {
     h = 0;
   } else {
@@ -259,6 +289,7 @@ function rgbToHsb(r, g, b) {
 
 // Function to convert RGB to YCbCr values
 function rgbToYCbCrValues(r, g, b) {
+  // Calculate Y (luma/brightness), blue and red 
   let y = 0.299 * r + 0.587 * g + 0.114 * b;
   let cb = 0.564 * (b - y);
   let cr = 0.713 * (r - y);
@@ -268,14 +299,16 @@ function rgbToYCbCrValues(r, g, b) {
 
 // Function to segment an image based on slider thresholds
 function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
+  // Create images for segmented channels
   let segmentedRedImage = createImage(src.width, src.height);
   let segmentedGreenImage = createImage(src.width, src.height);
   let segmentedBlueImage = createImage(src.width, src.height);
-
+  // Load pixel data for manipulation
   segmentedRedImage.loadPixels();
   segmentedGreenImage.loadPixels();
   segmentedBlueImage.loadPixels();
-
+  
+  // Uses nested loops to iterate over every pixel in the source image
   for (let x = 0; x < src.width; x++) {
     for (let y = 0; y < src.height; y++) {
       let c = src.get(x, y);
@@ -283,12 +316,15 @@ function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
       let greenValue = green(c);
       let blueValue = blue(c);
 
+      // Segmentation logic for the threshold comparison
       let segmentedRedValue = redValue > redThreshold ? 255 : 0;
       let segmentedGreenValue = greenValue > greenThreshold ? 255 : 0;
       let segmentedBlueValue = blueValue > blueThreshold ? 255 : 0;
 
+      // Calculate index for modifying pixel arrays
       let index = (x + y * src.width) * 4;
 
+      // Set pixels in segmented images based on thresholds
       segmentedRedImage.pixels[index] = segmentedRedValue;
       segmentedRedImage.pixels[index + 1] = 0;
       segmentedRedImage.pixels[index + 2] = 0;
@@ -306,10 +342,12 @@ function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
     }
   }
 
+  // Update the images with the modified data
   segmentedRedImage.updatePixels();
   segmentedGreenImage.updatePixels();
   segmentedBlueImage.updatePixels();
 
+  // Return all three segmented images
   return {
     red: segmentedRedImage,
     green: segmentedGreenImage,
@@ -317,26 +355,29 @@ function segmentImageSliders(src, redThreshold, greenThreshold, blueThreshold) {
   };
 }
 
+// Image segmentation based on ranges of values in the HSV 
 function segmentImageHSV(src) {
   let segmentedImage = createImage(src.width, src.height);
   segmentedImage.loadPixels();
 
+  // Iterates through each pixel of the source image
   for (let x = 0; x < src.width; x++) {
     for (let y = 0; y < src.height; y++) {
+       // Calculate pixel array
       let index = (x + y * src.width) * 4;
-      
       // Calculate HSV values
       let hueValue =src.pixels[index];
       let saturationValue = src.pixels[index + 1];
       let brightnessValue = src.pixels[index + 2];
 
-      // Segmentation criteria (Adjust these!)
+      // Defines the ranges for hue, saturation, and value
       let isSegmented = (hueValue >= 0 && hueValue <= 200) && 
                         (saturationValue >= 0 && saturationValue <= 255) && 
                         (brightnessValue >= 0 && brightnessValue <= 255);
 
-      // Segmentation
+      // Checks if the current pixel's HSV values fall within the specified ranges
       let segmentedPixelValue = isSegmented ? 255 : 0;
+      // Set segmented pixel values (grayscale)
       segmentedImage.pixels[index] = segmentedPixelValue;
       segmentedImage.pixels[index + 1] = segmentedPixelValue;
       segmentedImage.pixels[index + 2] = segmentedPixelValue;
@@ -347,26 +388,29 @@ function segmentImageHSV(src) {
   return segmentedImage;
 }
 
-
+// Image segmentation based on ranges of values in the YcbCr
 function segmentImageYCbCr(src) {
   let segmentedImage = createImage(src.width, src.height);
   segmentedImage.loadPixels();
 
+  // Iterates through each pixel of the source image
   for (let x = 0; x < src.width; x++) {
     for (let y = 0; y < src.height; y++) {
+      // Calculate pixel array
       let index = (x + y * src.width) * 4;
+       // Calculate HSV values
       let yValue = src.pixels[index];
       let cbValue = src.pixels[index + 1];
       let crValue = src.pixels[index + 2];
 
-      // Define your segmentation criteria here
-      // For example, you can segment based on Y range (e.g., 50-200), Cb range, and Cr range
+      // Define the ranges for hue, saturation, and value
       let isSegmented = (yValue >= 50 && yValue <= 200) &&
                         (cbValue >= 0 && cbValue <= 255) &&
                         (crValue >= 0 && crValue <= 255);
 
+      // Checks if the current pixel's YcbCr values fall within the specified ranges
       let segmentedPixelValue = isSegmented ? 255 : 0;
-
+      // Set segmented pixel values (grayscale)
       segmentedImage.pixels[index] = segmentedPixelValue;
       segmentedImage.pixels[index + 1] = segmentedPixelValue;
       segmentedImage.pixels[index + 2] = segmentedPixelValue;
@@ -384,25 +428,30 @@ function modelReady() {
 
 // Callback function when face detection results are obtained
 function gotResults(err, result) {
+  // Error handling
   if (err) {
     console.log(err);
     return;
   }
-
+  // Store Face Detections
   detections = result;
+  // If detected draw bounding box
   if (detections) {
     drawBox(detections, 0, 560, 160, 120);
     alert("No face detected! Please try again."); 
   }
-  
 }
 
 // Function to draw a rectangle around detected face
 function drawBox(detections, offsetX, offsetY) {
+  // Ensures that valid face detection data exists
   if (detections) {
+    // Get aligned rectangle data
     const alignedRect = detections.alignedRect;
+    // Extract box properties
     const { _x, _y, _width, _height } = alignedRect._box;
 
+    // Drawing Setup
     noFill();
     stroke(161, 95, 251);
     strokeWeight(2);
@@ -416,27 +465,33 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
     console.log("Effect has already been applied");
     return;
   }
+  // Ensures valid face detection data exists
   if (detections) {
     const alignedRect = detections.alignedRect;
+    // Get face bounding box
     const { _x, _y, _width, _height } = alignedRect._box;
-    outimage = createImage(_width, _height);
-    let faceImage;
 
+    let faceImage;
+    // A switch statement effect to apply based on the input effect parameter
     switch (effect) {
+      // Apply greyscale
       case 'greyscale':
         faceImage = createGreyscaleImage(scaledPicture.get(_x, _y, _width, _height));
         break;
       case 'blurred':
+        // Apply blurring
         let blurredImage = scaledPicture.get(_x, _y, _width, _height);
         blurredImage.filter(BLUR, 15);
         faceImage = blurredImage;
         break;
       case 'colorConverted':
+        // Apply color converted 
         if (currentFaceModification === 'colorConverted') {
           faceImage = hsvImage.get(_x, _y, _width, _height);
         }
         break;
       case 'pixelate':
+        // Apply pixelate
         faceImage = scaledPicture.get(_x, _y, _width, _height);
         faceImage = applyPixelationToFace(faceImage);
         break;
@@ -444,6 +499,7 @@ function applyEffectToFace(effect, detections, offsetX, offsetY) {
         faceImage = scaledPicture.get(_x, _y, _width, _height);
     }
 
+    // Display the modified face
     image(faceImage, _x + offsetX, _y + offsetY, _width, _height);
   }
 }
@@ -453,11 +509,14 @@ function applyPixelationToFace(faceImage, offsetX, offsetY) {
   faceImage = createGreyscaleImage(scaledPicture);
   const pixelatedImage = createImage(faceImage.width, faceImage.height);
   pixelatedImage.loadPixels();
-
+  // Size of each pixelation block
   const blockSize = 5;
-
+ 
+  // Iterates over the image in steps of blockSize
   for (let y = 0; y < faceImage.height; y += blockSize) {
+    // The nested inner loops go through each pixel within a blockSize
     for (let x = 0; x < faceImage.width; x += blockSize) {
+      // Average color calculation for a block
       let totalRed = 0;
       let totalGreen = 0;
       let totalBlue = 0;
@@ -482,6 +541,8 @@ function applyPixelationToFace(faceImage, offsetX, offsetY) {
       const averageGreen = totalGreen / numPixels;
       const averageBlue = totalBlue / numPixels;
 
+      // Nested loops iterates over the same block again to sets all pixels within the block to the calculated average color, 
+      // creating the pixelated effect
       for (let blockY = 0; blockY < blockSize; blockY++) {
         for (let blockX = 0; blockX < blockSize; blockX++) {
           const currentX = x + blockX;
